@@ -5,9 +5,10 @@ decode::decode(){
 }
 
 //construct function, set up the string to decode
-decode::decode(std::string str,std::string *name){
+decode::decode(std::string str,std::string *name,torrContent* torr){
 	this->scrstr = str;
 	this->name = name;
+	this->torr = torr;
 }
 
 decode::~decode(){
@@ -31,25 +32,36 @@ int decode::run(const std::string* str){
 			i += this->deInt(&temp);
 		}else if((*str)[i] == 108){
 			i += this->deList(&temp);
+		}else if((*str)[i] == 101){
+			i++;
+			break;
+		}else{
+			std::cout << "ERROR:File is not torrent file or file is broken!" << std::endl;
+			break;
 		}
-
-		//jurdg end of Dictionary or List
-		//e is the flag of dictonary or list end
-		if((*str)[i] == 101){
-			return i+1;
-		}	
 	}
+	return i;
 }
 
 //decode type string
 //temp2 is the content of bencode
 int decode::deStr(const std::string* str){
 	int i = 0;
+
+	//string length
 	int len = 0;
+
+	//position of ':'
 	int pos = 0;
+
+	//return value
 	int re = 0;
 	std::string temp = *str;
+
+	//get length of string-type 
 	std::string temp1 = *str;
+
+	//get content of string-type 
 	std::string temp2 = *str;
 
 	while(i < temp.length()){
@@ -57,17 +69,11 @@ int decode::deStr(const std::string* str){
 			pos = temp.find(':');
 			temp1 = temp.substr(0,pos);
 			len  = std::stoi(temp1);
-			//if consis of \n,do more change
-			std::string tt = temp.substr(pos + 1,len);
-			if(tt.find('\n' ) == -1){
-				temp2 = temp.substr(pos + 1,len);
-				re = pos  + len + 1;
-			}else{
-				temp2 = temp.substr(pos + 1,len-1);
-				re =pos  + len;
-			}
-			i += pos + len;
-			temp = temp.substr(0,i);
+
+			//maybe its no matter with '\n'
+			temp2 = temp.substr(pos + 1,len);
+			re = pos + 1 + len;
+			i += temp.length();
 		}else{
 			i++;
 		}
@@ -80,6 +86,7 @@ int decode::deStr(const std::string* str){
 		temp2 = temp2.substr(0,pos); 
 		*this->name = temp2;
 		std::cout << temp2 << std::endl;
+		torr->fileName = temp2;
 		return temp.length();
 	}
 
@@ -91,33 +98,29 @@ int decode::deDic(const std::string* str){
 	int pos = 0;
 	std::string temp = (*str);
 	temp =  str->substr(1);
-	//std::cout << "BEGIN OF DICTIONARY" << std::endl;
 
 	//use function run,which iterative decode type of dictionary
 	pos = run(&temp);
-
-	//std::cout << "END OF DICTIONARY" << std::endl;
-
 	return pos + 1;
 }
 
 //decode type of integer
 int decode::deInt(const std::string* str){
-	int number  = 0;
+	long number  = 0;
 	int pos = 0;
 	int len = 0;
-	std::string temp = (*str);
-	std::string temp1 = (*str);
+	std::string temp;
 
 	pos = str->find('e');
 
-	temp1 = str->substr(0,(pos+1));
-	len = temp1.length();
-
+	//cant use "stoi" function
+	//because of it is to long that may out of memery.
+	//so use "strtol" funciton
 	temp = str->substr(1,(pos-1));
-	number = std::stoi(temp);
-	//std::cout << "number = " << number << std::endl;
-	return len;
+	const char* num = temp.c_str();
+	number = strtol(num,NULL,10);
+
+	return pos + 1;
 }
 
 //decode type of list
@@ -125,15 +128,13 @@ int  decode::deList(const std::string* str){
 	int pos = 0;
 	std::string temp = (*str);
 	temp =  str->substr(1);
-	///std::cout << "BEGIN OF LIST" << std::endl;
 	pos = run(&temp);
-	//std::cout << "END OF LIST" << std::endl;
 	return pos + 1;
 }
 
 bool decode::IsVedio(const std::string* str){
-	std::string vedio[10] = {"avi" ,"rmvb" ,"rm" ,"mpg" ,"mpeg" ,"wmv" ,"mp4" ,"mkv" ,"ISO" ,"wma"};
-		 
+	std::string vedio[10] = {".avi" ,".rmvb" ,".rm" ,".mpg" ,".mpeg" ,".wmv" ,".mp4" ,".mkv" ,".ISO" ,".wma"};
+
 	for(int i = 0;i < 10;i++){
 		if(str->find(vedio[i]) != (-1)){
 			return true;
